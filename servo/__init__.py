@@ -19,6 +19,7 @@ import logging
 import logging.config
 from servo.config import LOG_FILE, set_pidfile
 from servo.main_loop import ServoLoop
+from servo.cw_loop import CWLoop
 
 __version__ = '1.0.0-dev'
 Version = __version__
@@ -34,5 +35,5 @@ console = logging.StreamHandler()
 log.addHandler(console)
 
 def start_servo():
-    # TODO: should daemonize 
+    CWLoop().start()
     ServoLoop().start()

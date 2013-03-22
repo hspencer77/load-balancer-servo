@@ -19,25 +19,57 @@
 import socket
 import sys
 import os
+import servo
+import servo.config as config
+from log import HttpLog
+from log import TcpLog
+import threading
 
-server_address = '/var/log/load-balancer-servo/haproxy.sock'
+class LogListener(threading.Thread):
+    def __init__(self, stat):
+        self.running = True
+        self.stat = stat
+        threading.Thread.__init__(self)
 
-# Make sure the socket does not already exist
-
-def start_server():
-    try:
-        os.unlink(server_address)
-    except OSError:
-        if os.path.exists(server_address):
-            raise
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-    sock.bind(server_address)
-
-    while True:
-    # Wait for a connection
+    def run(self):
+        self.running = True
+        server_address = config.CW_LISTENER_DOM_SOCKET
         try:
+            os.unlink(server_address)
+        except OSError:
+            if os.path.exists(server_address):
+                raise
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        sock.bind(server_address)
+        self.socket = sock
+
+        while self.running:
             data, client_address = sock.recvfrom(1024)
-            print >>sys.stderr, 'received "%s"' % data
-        finally:
+            try:
+                log = self.parse(data)
+                if log is not None:
+                    self.stat.received(log)
+                    print log
+            except Exception, err:
+                servo.log.warn('parsing failed: %s' % err)
+
+    def parse(self, line):
+        endmarker= line.rfind(':')
+        if(endmarker > 0):
+            line = line[endmarker+1:]
+        else:
+            raise Exception()
+        line = line.strip()
+
+        if line.startswith('httplog'):
+            return HttpLog.parse(line)
+        elif line.startswith('tcplog'):
+            return TcpLog.parse(line)
+ 
+    def stop(self):
+        try:
+            self.running = False
+            self.socket.close()
+        except:
             pass
-        
+
