@@ -49,7 +49,6 @@ class LogListener(threading.Thread):
                 log = self.parse(data)
                 if log is not None:
                     self.stat.received(log)
-                    print log
             except Exception, err:
                 servo.log.warn('parsing failed: %s' % err)
 

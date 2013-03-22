@@ -56,7 +56,7 @@ class HttpLog(HaproxyLog):
         # TODO: SPARK: more sophisticated logic to classify the termination state would be needed
         # any session who's termination state is not '--' represents that the haproxy detected error with the session and 
         # sent the http status code accordingly to the client
-        if self.term_state is '--': 
+        if self.term_state == '--': 
             return True
         else:
             return False 
