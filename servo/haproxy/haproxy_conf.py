@@ -156,6 +156,12 @@ class ConfBuilderHaproxy(ConfBuilder):
                 self.__content_map[section_name].append('# %s'%comment)
             self.__content_map[section_name].append('mode %s' % protocol)
             self.__content_map[section_name].append('bind 0.0.0.0:%s' % port)
+            self.__content_map[section_name].append('log /var/log/load-balancer-servo/haproxy.sock local2 info')
+            if protocol == 'http':
+                self.__content_map[section_name].append('option httplog')
+            elif protocol == 'tcp':
+                self.__content_map[section_name].append('option tcplog')
+
             def_backend = 'backend-%s-%s' % (protocol, port)
             self.__content_map[section_name].append('default_backend %s' % def_backend)
             # create the empty backend section
