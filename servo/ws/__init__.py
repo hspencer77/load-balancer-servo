@@ -3,8 +3,14 @@ from boto.ec2.elb import ELBConnection
 from boto.ec2.regioninfo import RegionInfo
 from boto.ec2.elb.loadbalancer import LoadBalancer
 from boto.ec2.cloudwatch import CloudWatchConnection
+from boto.iam.connection import IAMConnection
 import servo.hostname_cache as hostname_cache
+import time
+
 from collections import Iterable
+
+def connect_euare(host_name=None, port=8773, path="services/Euare", aws_access_key_id=None, aws_secret_access_key=None, security_token=None, **kwargs):
+    return EucaEuareConnection(host=host_name, port=port, path=path, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, security_token=security_token, **kwargs)
 
 def connect_elb(host_name=None, port=80, cluster=None, path="services/LoadBalancing", aws_access_key_id=None, aws_secret_access_key=None, security_token = None, **kwargs):
     region=RegionInfo(name=cluster, endpoint=host_name)
@@ -33,7 +39,48 @@ class StatefulInstance(object):
         else:
             setattr(self, name, value)
 
+class EucaEuareConnection(IAMConnection):
+    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
+                 is_secure=False, port=None, proxy=None, proxy_port=None,
+                 proxy_user=None, proxy_pass=None, host=None, debug=0, 
+                 https_connection_factory=None, path='/', security_token=None, validate_certs=True):
+        """
+        Euca-specific extension to boto's IAM connection. 
+        """
+        IAMConnection.__init__(self, aws_access_key_id,
+                            aws_secret_access_key,
+                            is_secure, port, proxy,
+                            proxy_port, proxy_user, proxy_pass,
+                            host, debug, https_connection_factory,
+                            path, security_token,
+                            validate_certs=validate_certs)
 
+    def download_server_certificate(self, cert_arn, delegation_certificate, auth_signature):
+        """
+        Download server certificate identified with 'cert_arn'. del_certificate and auth_signature
+        represent that the client is authorized to download the certificate
+
+        :type cert_arn: string
+        :param cert_arn: The ARN of the server ceritifcate to download
+ 
+        :type delegation_certificate: string
+        :param delegation_certificate: The certificate to show that this client is delegated to download the user's server certificate
+
+        :type auth_signature: string
+        :param auth_signature: The signature by Euare as a proof that the bearer of delegation_certificate is authorized to download server certificate
+ 
+        """
+        timestamp = str(time.time());
+        signature = "signature"
+        params = {'CertificateArn': cert_arn,
+                  'DelegationCertificate': delegation_certificate,
+                  'AuthSignature':auth_signature}
+                  #,
+                  #'Timestamp':timestamp,
+                  #'Signature':signature} 
+        return self.get_response('DownloadCertificate', params, verb='POST')
+
+ 
 class EucaELBConnection(ELBConnection):
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
                  is_secure=False, port=None, proxy=None, proxy_port=None,
