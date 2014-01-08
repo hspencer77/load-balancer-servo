@@ -18,7 +18,7 @@
 
 import os
 import servo.ws
-def describe(servo_id=None, host_name=None, aws_access_key_id=None, aws_secret_access_key=None):
+def describe(servo_id=None, host_name=None, port=80, aws_access_key_id=None, aws_secret_access_key=None):
     if aws_access_key_id is None:  
         aws_access_key_id=os.getenv('EC2_ACCESS_KEY')
     if aws_secret_access_key is None:
@@ -32,7 +32,7 @@ def describe(servo_id=None, host_name=None, aws_access_key_id=None, aws_secret_a
     lb = con.get_servo_load_balancers(servo_id)
     print "loadbalancer: %s" % lb
 
-def download_cert(host_name, aws_access_key_id=None, aws_secret_access_key=None):
+def download_cert(host_name, port=80, aws_access_key_id=None, aws_secret_access_key=None):
     if aws_access_key_id is None:  
         aws_access_key_id=os.getenv('EC2_ACCESS_KEY')
     if aws_secret_access_key is None:
@@ -41,9 +41,9 @@ def download_cert(host_name, aws_access_key_id=None, aws_secret_access_key=None)
         import re
         r=re.compile('[\t\n\r://]+')
         host_name=r.split(os.getenv('EC2_URL'))[1]
-    con = servo.ws.connect_euare(host_name=host_name, aws_access_key_id = aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+    con = servo.ws.connect_euare(host_name=host_name, port=port, aws_access_key_id = aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
     cert_arn = "arn"
     delegation_certificate="cert"
     auth_signature = "auth sig"  
-    cert = con.download_server_certificate(cert_arn, delegation_certificate, auth_signature)
+    cert = con.download_server_certificate("/root/kp.pem", cert_arn, delegation_certificate, auth_signature)
     print "cert: %s" % cert

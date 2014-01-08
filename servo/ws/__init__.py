@@ -1,4 +1,5 @@
 import boto
+import boto.utils
 from boto.ec2.elb import ELBConnection
 from boto.ec2.regioninfo import RegionInfo
 from boto.ec2.elb.loadbalancer import LoadBalancer
@@ -6,10 +7,10 @@ from boto.ec2.cloudwatch import CloudWatchConnection
 from boto.iam.connection import IAMConnection
 import servo.hostname_cache as hostname_cache
 import time
-
+import M2Crypto
 from collections import Iterable
 
-def connect_euare(host_name=None, port=8773, path="services/Euare", aws_access_key_id=None, aws_secret_access_key=None, security_token=None, **kwargs):
+def connect_euare(host_name=None, port=80, path="services/Euare", aws_access_key_id=None, aws_secret_access_key=None, security_token=None, **kwargs):
     return EucaEuareConnection(host=host_name, port=port, path=path, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, security_token=security_token, **kwargs)
 
 def connect_elb(host_name=None, port=80, cluster=None, path="services/LoadBalancing", aws_access_key_id=None, aws_secret_access_key=None, security_token = None, **kwargs):
@@ -55,7 +56,7 @@ class EucaEuareConnection(IAMConnection):
                             path, security_token,
                             validate_certs=validate_certs)
 
-    def download_server_certificate(self, cert_arn, delegation_certificate, auth_signature):
+    def download_server_certificate(self, kp_file, cert_arn, delegation_certificate, auth_signature):
         """
         Download server certificate identified with 'cert_arn'. del_certificate and auth_signature
         represent that the client is authorized to download the certificate
@@ -70,15 +71,21 @@ class EucaEuareConnection(IAMConnection):
         :param auth_signature: The signature by Euare as a proof that the bearer of delegation_certificate is authorized to download server certificate
  
         """
-        timestamp = str(time.time());
-        signature = "signature"
+        timestamp = boto.utils.get_ts()
+        msg= cert_arn+"&"+timestamp
+        rsa = M2Crypto.RSA.load_key(kp_file)
+        msg_digest = M2Crypto.EVP.MessageDigest('sha256')
+        msg_digest.update(msg)
+        sig = rsa.sign(msg_digest.digest(),'sha256')
+        sig = sig.encode('base64')
+
+        print "msg: %s, signature: %s" % (msg,sig)
         params = {'CertificateArn': cert_arn,
                   'DelegationCertificate': delegation_certificate,
-                  'AuthSignature':auth_signature}
-                  #,
-                  #'Timestamp':timestamp,
-                  #'Signature':signature} 
-        return self.get_response('DownloadCertificate', params, verb='POST')
+                  'AuthSignature':auth_signature,
+                  'Timestamp':timestamp,
+                  'Signature':sig} 
+        return self.get_status('DownloadServerCertificate', params)
 
  
 class EucaELBConnection(ELBConnection):
