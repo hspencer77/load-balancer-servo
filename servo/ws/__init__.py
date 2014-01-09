@@ -56,7 +56,7 @@ class EucaEuareConnection(IAMConnection):
                             path, security_token,
                             validate_certs=validate_certs)
 
-    def download_server_certificate(self, kp_file, cert_arn, delegation_certificate, auth_signature):
+    def download_server_certificate(self, cert, pk, auth_signature, cert_arn):
         """
         Download server certificate identified with 'cert_arn'. del_certificate and auth_signature
         represent that the client is authorized to download the certificate
@@ -73,15 +73,16 @@ class EucaEuareConnection(IAMConnection):
         """
         timestamp = boto.utils.get_ts()
         msg= cert_arn+"&"+timestamp
-        rsa = M2Crypto.RSA.load_key(kp_file)
+        rsa = M2Crypto.RSA.load_key_string(pk)
         msg_digest = M2Crypto.EVP.MessageDigest('sha256')
         msg_digest.update(msg)
         sig = rsa.sign(msg_digest.digest(),'sha256')
         sig = sig.encode('base64')
+        cert = cert.encode('base64')
 
         print "msg: %s, signature: %s" % (msg,sig)
         params = {'CertificateArn': cert_arn,
-                  'DelegationCertificate': delegation_certificate,
+                  'DelegationCertificate': cert,
                   'AuthSignature':auth_signature,
                   'Timestamp':timestamp,
                   'Signature':sig} 

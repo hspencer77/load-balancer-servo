@@ -43,7 +43,15 @@ def download_cert(host_name, port=80, aws_access_key_id=None, aws_secret_access_
         host_name=r.split(os.getenv('EC2_URL'))[1]
     con = servo.ws.connect_euare(host_name=host_name, port=port, aws_access_key_id = aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
     cert_arn = "arn"
-    delegation_certificate="cert"
-    auth_signature = "auth sig"  
-    cert = con.download_server_certificate("/root/kp.pem", cert_arn, delegation_certificate, auth_signature)
+    f_cert = open("/root/cert.pem")
+    cert=f_cert.read()
+    f_cert.close()
+    f_pk = open("/root/pk.pem")
+    pk = f_pk.read()
+    f_pk.close()
+    f_sig = open("/root/sig")
+    sig = f_sig.read()
+    f_sig.close()
+ 
+    cert = con.download_server_certificate(cert, pk, sig, cert_arn)
     print "cert: %s" % cert
