@@ -56,5 +56,7 @@ def download_cert(host_name, port=80, aws_access_key_id=None, aws_secret_access_
     euare_crt = f_euare.read()
     f_euare.close()
  
-    cert = con.download_server_certificate(cert, pk, euare_crt, sig, cert_arn)
-    print "cert: %s" % cert
+    cert= con.download_server_certificate(cert, pk, euare_crt, sig, cert_arn)
+    print cert.get_certificate()
+    print cert.get_private_key()
+   

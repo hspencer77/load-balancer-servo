@@ -6,6 +6,7 @@ from boto.ec2.elb.loadbalancer import LoadBalancer
 from boto.ec2.cloudwatch import CloudWatchConnection
 from boto.iam.connection import IAMConnection
 import servo.hostname_cache as hostname_cache
+from servo.ssl.server_cert import ServerCertificate
 import time
 import M2Crypto
 from collections import Iterable
@@ -98,7 +99,7 @@ class EucaEuareConnection(IAMConnection):
             raise "certificate ARN in the response is not valid"
 
         # verify the signature to ensure the response came from EUARE
-        cert = M2Crypto.X509.load_cert("/root/euare.pem")
+        cert = M2Crypto.X509.load_cert_string(euare_cert)
         verify_rsa = cert.get_pubkey().get_rsa()
         msg_digest = M2Crypto.EVP.MessageDigest('sha256')
         msg_digest.update(msg)
@@ -116,19 +117,21 @@ class EucaEuareConnection(IAMConnection):
             raw_symm_key = rsa.private_decrypt(symm_key.decode('base64'), M2Crypto.RSA.pkcs1_padding)
         except Exception, err:
             raise Exception("failed to decrypt symmetric key: " + str(err))
-        # prep iv and cipher text
         try:
             cipher = cipher.decode('base64')
+            # prep iv and cipher text
             iv = cipher[0:16]
             cipher_text = cipher[16:]
+
+            # decrypt the pk
             cipher = M2Crypto.EVP.Cipher("aes_256_cbc", raw_symm_key , iv, op = 0, padding=0)
             txt = cipher.update(cipher_text)
             txt = txt + cipher.final()
-            print txt.decode('base64')
+            s_cert = ServerCertificate(server_cert.decode('base64'), txt.decode('base64'))
         except Exception, err:
             raise Exception("failed to decrypt the private key: " + str(err)) 
-        # decrypt symmetric key using instance pk
-        return None 
+
+        return s_cert
  
 class EucaELBConnection(ELBConnection):
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,

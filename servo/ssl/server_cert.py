@@ -17,7 +17,7 @@
 # additional information or have any questions.
 
 class ServerCertificate(object):
-    def __init__(self, cert, pk)
+    def __init__(self, cert, pk):
         self.certificate = cert
         self.pk = pk
     
