@@ -80,14 +80,22 @@ class EucaEuareConnection(IAMConnection):
         sig = sig.encode('base64')
         cert = cert.encode('base64')
 
-        print "msg: %s, signature: %s" % (msg,sig)
         params = {'CertificateArn': cert_arn,
                   'DelegationCertificate': cert,
                   'AuthSignature':auth_signature,
                   'Timestamp':timestamp,
                   'Signature':sig} 
-        return self.get_status('DownloadServerCertificate', params)
-
+        resp = self.get_response('DownloadServerCertificate', params)
+        result = resp['euca:_download_server_certificate_response_type']['euca:download_server_certificate_result']
+        if not result:
+            return None
+        sig = result['euca:signature']
+        arn = result['euca:certificate_arn']
+        ts = result['euca:timestamp']
+        server_cert = result['euca:server_certificate']
+        server_pk = result['euca:server_pk'] 
+        print "arn:%s\nts:%s\nsig:%s\ncert:%s\npk:%s" % (arn,ts,sig,server_cert,server_pk)
+        
  
 class EucaELBConnection(ELBConnection):
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,

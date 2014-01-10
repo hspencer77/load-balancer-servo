@@ -42,7 +42,7 @@ def download_cert(host_name, port=80, aws_access_key_id=None, aws_secret_access_
         r=re.compile('[\t\n\r://]+')
         host_name=r.split(os.getenv('EC2_URL'))[1]
     con = servo.ws.connect_euare(host_name=host_name, port=port, aws_access_key_id = aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
-    cert_arn = "arn"
+    cert_arn = "arn:aws:iam::450510498576:server-certificate/mycert"
     f_cert = open("/root/cert.pem")
     cert=f_cert.read()
     f_cert.close()
