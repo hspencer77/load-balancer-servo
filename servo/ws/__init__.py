@@ -56,7 +56,7 @@ class EucaEuareConnection(IAMConnection):
                             path, security_token,
                             validate_certs=validate_certs)
 
-    def download_server_certificate(self, cert, pk, auth_signature, cert_arn):
+    def download_server_certificate(self, cert, pk, euare_cert, auth_signature, cert_arn):
         """
         Download server certificate identified with 'cert_arn'. del_certificate and auth_signature
         represent that the client is authorized to download the certificate
@@ -91,11 +91,44 @@ class EucaEuareConnection(IAMConnection):
             return None
         sig = result['euca:signature']
         arn = result['euca:certificate_arn']
-        ts = result['euca:timestamp']
         server_cert = result['euca:server_certificate']
         server_pk = result['euca:server_pk'] 
-        print "arn:%s\nts:%s\nsig:%s\ncert:%s\npk:%s" % (arn,ts,sig,server_cert,server_pk)
-        
+   
+        if arn != cert_arn:
+            raise "certificate ARN in the response is not valid"
+
+        # verify the signature to ensure the response came from EUARE
+        cert = M2Crypto.X509.load_cert("/root/euare.pem")
+        verify_rsa = cert.get_pubkey().get_rsa()
+        msg_digest = M2Crypto.EVP.MessageDigest('sha256')
+        msg_digest.update(msg)
+        if verify_rsa.verify(msg_digest.digest(), sig.decode('base64'), 'sha256') != 1 :
+            raise Exception("invalid signature from EUARE")
+
+        # prep symmetric keys
+        parts = server_pk.split("\n")
+        if(len(parts) != 2):
+            raise Exception("invalid format of server private key")
+
+        symm_key = parts[0]
+        cipher = parts[1] 
+        try:
+            raw_symm_key = rsa.private_decrypt(symm_key.decode('base64'), M2Crypto.RSA.pkcs1_padding)
+        except Exception, err:
+            raise Exception("failed to decrypt symmetric key: " + str(err))
+        # prep iv and cipher text
+        try:
+            cipher = cipher.decode('base64')
+            iv = cipher[0:16]
+            cipher_text = cipher[16:]
+            cipher = M2Crypto.EVP.Cipher("aes_256_cbc", raw_symm_key , iv, op = 0, padding=0)
+            txt = cipher.update(cipher_text)
+            txt = txt + cipher.final()
+            print txt.decode('base64')
+        except Exception, err:
+            raise Exception("failed to decrypt the private key: " + str(err)) 
+        # decrypt symmetric key using instance pk
+        return None 
  
 class EucaELBConnection(ELBConnection):
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
