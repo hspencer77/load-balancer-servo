@@ -167,7 +167,7 @@ class ConfBuilderHaproxy(ConfBuilder):
                 self.__content_map[section_name].append('reqadd X-Forwarded-Proto:\ %s' % protocol)
                 self.__content_map[section_name].append('reqadd X-Forwarded-Port:\ %s' % port)
             if protocol == 'https' or protocol == 'ssl':
-                self.__content_map[section_name].append('bind 0.0.0.0:%s ssl crt %s no-sslv3' % (port, cert))
+                self.__content_map[section_name].append('bind 0.0.0.0:%s ssl crt %s no-sslv3 ciphers RC4:HIGH:!aNULL:!MD5' % (port, cert))
             else: 
                 self.__content_map[section_name].append('bind 0.0.0.0:%s' % port)
 
